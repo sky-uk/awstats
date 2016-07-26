@@ -221,7 +221,7 @@
 'webtv',
 'democracy',
 'skygo',
-'skyplus/',
+'skyplus',
 'skyq',
 'darwin',
 # Anonymous Proxy Browsers (can be used as grabbers as well...)
@@ -454,7 +454,7 @@
 'webtv','WebTV browser',
 'democracy','Democracy',
 'skygo', 'Sky Go',
-'skyplus/', 'Sky Plus',
+'skyplus', 'Sky Plus',
 'skyq', 'Sky Q',
 'darwin', 'Sky Set top Box',
 # Anonymous Proxy Browsers (can be used as grabbers as well...)
@@ -610,7 +610,7 @@
 'xine','mediaplayer',
 'xmms','mediaplayer',
 'skygo', 'sky',
-'skyplus/', 'sky',
+'skyplus', 'sky',
 'skyq', 'sky',
 'darwin', 'sky',
 # RSS Readers
