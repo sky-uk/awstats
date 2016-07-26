@@ -220,6 +220,10 @@
 # Others (TV)
 'webtv',
 'democracy',
+'skygo',
+'skyplus/',
+'skyq',
+'darwin',
 # Anonymous Proxy Browsers (can be used as grabbers as well...)
 'cjb\.net',
 'ossproxy',
@@ -449,6 +453,10 @@
 # Others (TV)
 'webtv','WebTV browser',
 'democracy','Democracy',
+'skygo', 'Sky Go',
+'skyplus/', 'Sky Plus',
+'skyq', 'Sky Q',
+'darwin', 'Sky Set top Box',
 # Anonymous Proxy Browsers (can be used as grabbers as well...)
 'cjb\.net','<a href="http://proxy.cjb.net/" title="Browser home page [new window]" target="_blank">CJB.NET Proxy</a>',
 'ossproxy','<a href="http://www.marketscore.com/FAQ.Aspx" title="OSSProxy home page [new window]" target="_blank">OSSProxy</a>',
@@ -601,6 +609,10 @@
 'xaudio','mediaplayer',
 'xine','mediaplayer',
 'xmms','mediaplayer',
+'skygo', 'sky',
+'skyplus/', 'sky',
+'skyq', 'sky',
+'darwin', 'sky',
 # RSS Readers
 'abilon', 'abilon',
 'aggrevator', 'rss',
