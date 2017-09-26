@@ -36,8 +36,8 @@ use File::Spec;
 # Defines
 #------------------------------------------------------------------------------
 use vars qw/ $REVISION $VERSION /;
-$REVISION = '20160301';
-$VERSION  = "7.5 (build $REVISION)";
+$REVISION = '20161204';
+$VERSION  = "7.7 (build $REVISION)";
 
 # ----- Constants -----
 use vars qw/
@@ -1730,11 +1730,22 @@ sub Read_Config {
 			if ($_ eq $configdir) { $outsidedefaultvalue=0; last; }
 		}
 
-		# If from CGI, overwriting of configdir with a value that differs from a defautl value
-		# is only possible if AWSTATS_ENABLE_CONFIG_DIR defined
-		if ($ENV{'GATEWAY_INTERFACE'} && $outsidedefaultvalue && ! $ENV{"AWSTATS_ENABLE_CONFIG_DIR"})
+		# If from CGI, overwriting of configdir with a value that differs from a default value
+		# is only possible if AWSTATS_ENABLE_CONFIG_DIR defined.
+		# AWSTATS_ENABLE_CONFIG_DIR must contains dir allowed
+		if ($ENV{'GATEWAY_INTERFACE'} && $outsidedefaultvalue)
 		{
-			error("Sorry, to allow overwriting of configdir parameter, from an AWStats CGI page, with a non default value, environment variable AWSTATS_ENABLE_CONFIG_DIR must be set to 1. For example, by adding the line 'SetEnv AWSTATS_ENABLE_CONFIG_DIR 1' in your Apache config file or into a .htaccess file.");
+			if (! $ENV{"AWSTATS_ENABLE_CONFIG_DIR"})
+			{
+				error("Sorry, to allow overwriting of configdir parameter, from an AWStats CGI page, with a non default value, environment variable AWSTATS_ENABLE_CONFIG_DIR must be set to full path of allowed directory. For example, by adding the line 'SetEnv AWSTATS_ENABLE_CONFIG_DIR /mydirofconf' in your Apache config file or into a .htaccess file.");
+			}
+			else
+			{
+				if ($configdir !~ $ENV{"AWSTATS_ENABLE_CONFIG_DIR"})
+				{
+					error("Sorry, using configdir parameter from an AWStats CGI page is possible only if parameter configdir is a directory defined into environment variable AWSTATS_ENABLE_CONFIG_DIR");
+				}
+			}
 		}
 
 		@PossibleConfigDir = ("$configdir");
@@ -2356,16 +2367,21 @@ sub Read_Ref_Data {
 #------------------------------------------------------------------------------
 sub Read_Language_Data {
 
-# Check lang files in common possible directories :
-# Windows and standard package:         	"$DIR/lang" (lang in same dir than awstats.pl)
-# Debian package :                    		"/usr/share/awstats/lang"
+	# Check lang files in common possible directories :
+	# Windows and standard package:         	"$DIR/lang" (lang in same dir than awstats.pl)
+	# Debian package :                    		"/usr/share/awstats/lang"
 	my @PossibleLangDir =
 	  ( "$DirLang", "$DIR/lang", "/usr/share/awstats/lang" );
 
 	my $FileLang = '';
 	foreach (@PossibleLangDir) {
 		my $searchdir = $_;
-		if (   $searchdir
+		if ( $searchdir =~ /\|/ )		# We refuse path that contains "|" 
+		{
+			error("DirLang parameter can't contains character |");
+			next;	
+		}
+		if ( $searchdir
 			&& ( !( $searchdir =~ /\/$/ ) )
 			&& ( !( $searchdir =~ /\\$/ ) ) )
 		{
@@ -3254,7 +3270,7 @@ sub Read_Plugins {
 							);
 						}
 
-						# Plugin load and init successfull
+						# Plugin load and init successful
 						foreach my $elem ( split( /\s+/, $initret ) ) {
 
 							# Some functions can only be plugged once
@@ -3596,7 +3612,7 @@ sub Read_History_With_TmpUpdate {
 		}
 		if ( !$withupdate && $HTMLOutput{'main'} && $ShowKeywordsStats ) {
 			$SectionsToLoad{'keywords'} = $order++;
-		}    # If we update, dont need to load
+		}    # If we update, there is no need to load
 		     # Others
 		if (   $UpdateStats
 			|| $MigrateStats
@@ -7929,7 +7945,7 @@ sub Sanitize {
 #				cookie used for AWStats server sessions. Attacker can this way caught this
 #				cookie and used it to go on AWStats server like original visitor. For this
 #				resaon, parameter received by AWStats must be sanitized by this function
-#				before beeing put inside a web page.
+#				before being put inside a web page.
 # Parameters:   stringtoclean
 # Input:        None
 # Output:       None
@@ -7997,7 +8013,7 @@ sub FileCopy {
 # Parameters:   query
 # Input:        None
 # Output:       None
-# Return:		formated query
+# Return:		formatted query
 #------------------------------------------------------------------------------
 # TODO Appeller cette fonction partout ou il y a des NewLinkParams
 sub CleanNewLinkParamsFrom {
@@ -8542,7 +8558,7 @@ sub PrintCLIHelp{
 		'browsers',       'domains', 'operating_systems', 'robots',
 		'search_engines', 'worms'
 	);
-	print "----- $PROG $VERSION (c) 2000-2015 Laurent Destailleur -----\n";
+	print "----- $PROG $VERSION (c) 2000-2016 Laurent Destailleur -----\n";
 	print
 "AWStats is a free web server logfile analyzer to show you advanced web\n";
 	print "statistics.\n";
@@ -8876,7 +8892,7 @@ sub HTMLShowURLInfo {
 			{    # URL seems to be extracted from a proxy log file
 				print "<a href=\""
 				  . XMLEncode("$newkey")
-				  . "\" target=\"url\" rel=\"nofollow\">"
+				  . "\" target=\"url\" rel=\"nofollow noopener noreferrer\">"
 				  . XMLEncode($nompage) . "</a>";
 			}
 			elsif ( $newkey =~ /^\// )
@@ -8891,7 +8907,7 @@ sub HTMLShowURLInfo {
 				}
 				print "<a href=\""
 				  . XMLEncode("$urlprot://$SiteDomain$newkey")
-				  . "\" target=\"url\" rel=\"nofollow\">"
+				  . "\" target=\"url\" rel=\"nofollow noopener noreferrer\">"
 				  . XMLEncode($nompage) . "</a>";
 			}
 			else {
@@ -9005,9 +9021,12 @@ sub DefinePerlParsingFormat {
 			);
 		}
 		elsif ( $LogFormat eq '4' ) {    # Same than "%h %l %u %t \"%r\" %>s %b"
-			 # %u (user) is "(.+)" instead of "[^ ]+" because can contain space (Lotus Notes).
-			$PerlParsingFormat =
-"([^ ]+) [^ ]+ (.+) \\[([^ ]+) [^ ]+\\] \\\"([^ ]+) ([^ ]+)(?: [^\\\"]+|)\\\" ([\\d|-]+) ([\\d|-]+)";
+			# %u (user) is "(.+)" instead of "[^ ]+" because can contain space (Lotus Notes).
+			# Sample: 10.100.10.45 - BMAA\will.smith [01/Jul/2013:07:17:28 +0200] "GET /Download/__Omnia__Aus- und Weiterbildung__Konsular- und Verwaltungskonferenz, Programm.doc HTTP/1.1" 200 9076810
+#			$PerlParsingFormat = 
+#"([^ ]+) [^ ]+ (.+) \\[([^ ]+) [^ ]+\\] \\\"([^ ]+) ([^ ]+)(?: [^\\\"]+|)\\\" ([\\d|-]+) ([\\d|-]+)";
+			$PerlParsingFormat = 
+"([^ ]+) [^ ]+ (.+) \\[([^ ]+) [^ ]+\\] \\\"([^ ]+) (.+) [^\\\"]+\\\" ([\\d|-]+) ([\\d|-]+)";
 			$pos_host    = 0;
 			$pos_logname = 1;
 			$pos_date    = 2;
@@ -9177,7 +9196,7 @@ sub DefinePerlParsingFormat {
 "([^$LogSeparatorWithoutStar]+T[^$LogSeparatorWithoutStar]+)(Z|[-+\.]\\d\\d[:\\.\\dZ]*)?";
 			}
 
-			# Special for methodurl and methodurlnoprot
+			# Special for methodurl, methodurlprot and methodurlnoprot
 			elsif ( $f =~ /%methodurl$/ ) {
 				$pos_method = $i;
 				$i++;
@@ -9189,6 +9208,16 @@ sub DefinePerlParsingFormat {
 
 #"\\\"([^$LogSeparatorWithoutStar]+) ([^$LogSeparatorWithoutStar]+) [^\\\"]+\\\"";
 "\\\"([^$LogSeparatorWithoutStar]+) ([^$LogSeparatorWithoutStar]+)(?: [^\\\"]+|)\\\"";
+			}
+			elsif ( $f =~ /%methodurlprot$/ ) {
+				$pos_method = $i;
+				$i++;
+				push @fieldlib, 'method';
+				$pos_url = $i;
+				$i++;
+				push @fieldlib, 'url';
+				$PerlParsingFormat .=
+"\\\"([^$LogSeparatorWithoutStar]+) ([^\\\"]+) ([^\\\"]+)\\\"";
 			}
 			elsif ( $f =~ /%methodurlnoprot$/ ) {
 				$pos_method = $i;
@@ -10677,7 +10706,7 @@ sub HTMLMainFileType{
 		$count++;
 	}
 
-	# Add total (only usefull if compression is enabled)
+	# Add total (only useful if compression is enabled)
 	if ( $ShowFileTypesStats =~ /C/i ) {
 		my $colspan = 3;
 		if ( $ShowFileTypesStats =~ /H/i ) { $colspan += 2; }
@@ -11239,7 +11268,7 @@ sub HTMLShowOSDetail{
 }
 
 #------------------------------------------------------------------------------
-# Function:     Prints the Unkown OS Detail frame or static page
+# Function:     Prints the Unknown OS Detail frame or static page
 # Parameters:   $NewLinkTarget
 # Input:        _
 # Output:       HTML
@@ -18343,6 +18372,7 @@ if ( $UpdateStats && $FrameName ne 'index' && $FrameName ne 'mainleft' )
 		elsif (
 			$LogType eq 'F'
 			&& (   $field[$pos_method] eq 'RETR'
+				|| $field[$pos_method] eq 'D'
 				|| $field[$pos_method] eq 'o'
 				|| $field[$pos_method] =~ /$regget/o )
 		  )
@@ -18353,6 +18383,7 @@ if ( $UpdateStats && $FrameName ne 'index' && $FrameName ne 'mainleft' )
 		elsif (
 			$LogType eq 'F'
 			&& (   $field[$pos_method] eq 'STOR'
+				|| $field[$pos_method] eq 'U'
 				|| $field[$pos_method] eq 'i'
 				|| $field[$pos_method] =~ /$regsent/o )
 		  )
@@ -19199,6 +19230,11 @@ if ( $UpdateStats && $FrameName ne 'index' && $FrameName ne 'mainleft' )
 		my $Host         = $field[$pos_host];
 		my $HostResolved = ''
 		  ; # HostResolved will be defined in next paragraf if countedtraffic is true
+
+		if( $Host =~ /^([^:]+):[0-9]+$/ ){ # Host may sometimes have an ip:port syntax (ex: 54.32.12.12:60321)
+		    $Host = $1;
+		}
+
 
 		if ( !$countedtraffic || $countedtraffic == 6) {
 			my $ip = 0;
